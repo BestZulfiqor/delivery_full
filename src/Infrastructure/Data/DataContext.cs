@@ -10,6 +10,7 @@ public class DataContext(DbContextOptions<DataContext> options) : DbContext(opti
     public DbSet<Order> Orders => Set<Order>();
     public DbSet<OrderDetail> OrderDetails => Set<OrderDetail>();
     public DbSet<User> Users => Set<User>();
+    public DbSet<Restaurant> Restaurants  => Set<Restaurant>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
 {

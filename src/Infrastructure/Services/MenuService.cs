@@ -1,5 +1,8 @@
+using System.Net;
 using AutoMapper;
 using Core.DTOs.MenuDto;
+using Core.Entities;
+using Core.Exceptions;
 using Core.Filters;
 using Core.Responses;
 using Infrastructure.Data;
@@ -76,23 +79,91 @@ public class MenuService(DataContext context, IMapper mapper) : IMenuService
         }
     }
 
-    public Task<Response<GetMenuDto>> GetMenuById(int id)
+    public async Task<Response<GetMenuDto>> GetMenuById(int id)
     {
-        throw new NotImplementedException();
+        try
+        {
+            var menu = await context.Menus.FindAsync(id);
+            if (menu is null)
+            {
+                return new Response<GetMenuDto>(HttpStatusCode.NotFound, "Not found courier");
+            }
+
+            var dto = mapper.Map<GetMenuDto>(menu);
+            return new Response<GetMenuDto>(dto);
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e.Message);
+            throw;
+        }
     }
 
-    public Task<Response<GetMenuDto>> CreateMenu(CreateMenuDto dto)
+    public async Task<Response<GetMenuDto>> CreateMenu(CreateMenuDto dto)
     {
-        throw new NotImplementedException();
+        try
+        {
+            var menu = mapper.Map<Menu>(dto);
+            await context.Menus.AddAsync(menu);
+            var result = await context.SaveChangesAsync();
+            var getDto = mapper.Map<GetMenuDto>(menu);
+            return result == 0
+                ? new Response<GetMenuDto>(HttpStatusCode.BadRequest, "Not add")
+                : new Response<GetMenuDto>(getDto);
+        }
+        catch (DbUpdateException e)
+        {
+            Console.WriteLine(e.Message);
+            throw;
+        }
     }
 
-    public Task<Response<GetMenuDto>> UpdateMenu(int id, UpdateMenuDto dto)
+    public async Task<Response<GetMenuDto>> UpdateMenu(int id, UpdateMenuDto dto)
     {
-        throw new NotImplementedException();
+        try
+        {
+            var menu = await context.Menus.FindAsync(id);
+            if (menu is null)
+            {
+                return new Response<GetMenuDto>(HttpStatusCode.NotFound, "Not found");
+            }
+
+            mapper.Map(dto, menu);
+            var result = await context.SaveChangesAsync();
+
+            var getDto = mapper.Map<GetMenuDto>(menu);
+            
+            return result == 0
+                ? new Response<GetMenuDto>(HttpStatusCode.BadRequest, "Not updated")
+                : new Response<GetMenuDto>(getDto);
+        }
+        catch (DbUpdateException e)
+        {
+            Console.WriteLine(e.Message);
+            throw;
+        }
     }
 
-    public Task<Response<string>> DeleteMenu(int id)
+    public async Task<Response<string>> DeleteMenu(int id)
     {
-        throw new NotImplementedException();
+        try
+        {
+            var menu = await context.Menus.FindAsync(id);
+            if (menu is null)
+            {
+                return new Response<string>(HttpStatusCode.NotFound, "Not found");
+            }
+
+            context.Menus.Remove(menu);
+            var result = await context.SaveChangesAsync();
+            return result == 0
+                ? new Response<string>(HttpStatusCode.BadRequest, "Not deleted")
+                : new Response<string>("Deleted");
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+            throw;
+        }
     }
 }

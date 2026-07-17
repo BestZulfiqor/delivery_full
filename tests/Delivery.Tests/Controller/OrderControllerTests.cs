@@ -91,7 +91,7 @@ public class OrderControllerTests
     {
         // Arrange
         int id = 1;
-        var response = new Response<string>("Delete");
+        var response = new Response<string>("Deleted");
         A.CallTo(() => _service.DeleteOrder(id)).Returns(Task.FromResult(response));
 
         // Act

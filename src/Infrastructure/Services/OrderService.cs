@@ -117,7 +117,7 @@ public class OrderService(DataContext context, IMapper mapper) : IOrderService
             var result = await context.SaveChangesAsync();
             return result == 0
                 ? new Response<string>(HttpStatusCode.BadRequest, "Not delete")
-                : new Response<string>("Delete");
+                : new Response<string>("Deleted");
         }
         catch (Exception e)
         {

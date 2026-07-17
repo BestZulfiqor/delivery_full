@@ -284,9 +284,9 @@ namespace Infrastructure.Migrations
                         .HasColumnName("working_hours");
 
                     b.HasKey("Id")
-                        .HasName("pk_restaurant");
+                        .HasName("pk_restaurants");
 
-                    b.ToTable("restaurant", (string)null);
+                    b.ToTable("restaurants", (string)null);
                 });
 
             modelBuilder.Entity("Core.Entities.User", b =>
@@ -352,7 +352,7 @@ namespace Infrastructure.Migrations
                         .HasForeignKey("RestaurantId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
-                        .HasConstraintName("fk_menus_restaurant_restaurant_id");
+                        .HasConstraintName("fk_menus_restaurants_restaurant_id");
 
                     b.Navigation("Restaurant");
                 });
@@ -371,7 +371,7 @@ namespace Infrastructure.Migrations
                         .HasForeignKey("RestaurantId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired()
-                        .HasConstraintName("fk_orders_restaurant_restaurant_id");
+                        .HasConstraintName("fk_orders_restaurants_restaurant_id");
 
                     b.HasOne("Core.Entities.User", "User")
                         .WithMany("Orders")

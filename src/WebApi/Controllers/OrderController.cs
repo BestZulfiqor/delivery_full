@@ -7,7 +7,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace Delivery.Controllers;
 
 [ApiController]
-[Route("api[controller]")]
+[Route("api/[controller]")]
 public class OrderController(IOrderService service) : ControllerBase
 {
     [HttpGet]

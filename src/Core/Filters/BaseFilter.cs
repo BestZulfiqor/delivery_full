@@ -1,6 +1,6 @@
 namespace Core.Filters;
 
-public class ValidFilter
+public class BaseFilter
 {
     private int _pageNumber = 1;
     public int PageNumber

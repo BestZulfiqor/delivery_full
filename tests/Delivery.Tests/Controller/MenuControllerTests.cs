@@ -5,6 +5,7 @@ using Delivery.Controllers;
 using FakeItEasy;
 using FluentAssertions;
 using Infrastructure.Interfaces;
+using Infrastructure.Interfaces.Services;
 
 namespace Delivery.Tests.Controller;
 

@@ -1,6 +1,9 @@
 using Infrastructure.AutoMapper;
 using Infrastructure.Data;
 using Infrastructure.Interfaces;
+using Infrastructure.Interfaces.Repositories;
+using Infrastructure.Interfaces.Services;
+using Infrastructure.Repositories;
 using Infrastructure.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi.Models;
@@ -15,6 +18,8 @@ builder.Services.AddScoped<IOrderDetailService, OrderDetailService>();
 builder.Services.AddScoped<IMenuService, MenuService>();
 builder.Services.AddScoped<IRestaurantService, RestaurantService>();
 builder.Services.AddScoped<IUserService, UserService>();
+builder.Services.AddScoped(typeof(IBaseRepository<>), typeof(BaseRepository<>));
+builder.Services.AddScoped<IRestaurantRepository, RestaurantRepository>();
 builder.Services.AddDbContext<DataContext>(t => t.UseNpgsql(builder.Configuration.GetConnectionString
     ("DefaultConnection")).UseSnakeCaseNamingConvention());
 builder.Services.AddAutoMapper(typeof(InfrastructureProfile));

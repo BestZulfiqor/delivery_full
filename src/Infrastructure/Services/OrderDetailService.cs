@@ -8,6 +8,7 @@ using Core.Filters;
 using Core.Responses;
 using Infrastructure.Data;
 using Infrastructure.Interfaces;
+using Infrastructure.Interfaces.Services;
 using Microsoft.EntityFrameworkCore;
 
 namespace Infrastructure.Services;

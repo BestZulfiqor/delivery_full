@@ -2,7 +2,7 @@ using Core.DTOs.CourierDto;
 using Core.Filters;
 using Core.Responses;
 
-namespace Infrastructure.Interfaces;
+namespace Infrastructure.Interfaces.Services;
 
 public interface ICourierService
 {

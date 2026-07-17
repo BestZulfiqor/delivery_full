@@ -7,55 +7,31 @@ using Core.Filters;
 using Core.Responses;
 using Infrastructure.Data;
 using Infrastructure.Interfaces;
+using Infrastructure.Interfaces.Repositories;
+using Infrastructure.Interfaces.Services;
 using Microsoft.EntityFrameworkCore;
 
 namespace Infrastructure.Services;
 
-public class RestaurantService(DataContext context, IMapper mapper) : IRestaurantService
+public class RestaurantService(IRestaurantRepository repository, IMapper mapper) :
+    IRestaurantService
 {
     public async Task<Response<List<GetRestaurantDto>>> GetRestaurants(RestaurantFilter filter)
     {
-        try
-        {
-            var query = context.Restaurants.AsNoTracking().AsQueryable();
-
-            var totalRecords = await query.CountAsync();
-            var restaurants = await query.OrderBy(n => n.Id)
-                .Skip((filter.PageNumber - 1) * filter.PageSize)
-                .Take(filter.PageSize)
-                .ToListAsync();
-            var data = mapper.Map<List<GetRestaurantDto>>(restaurants);
-            return new PagedResponse<List<GetRestaurantDto>>(
-                data,
-                filter.PageNumber,
-                filter.PageSize,
-                totalRecords
-            );
-        }
-        catch (Exception e)
-        {
-            Console.WriteLine(e);
-            throw;
-        }
+        var (restaurants, totalRecords) = await repository.GetPagedRestaurantsAsync(filter);
+        var data = mapper.Map<List<GetRestaurantDto>>(restaurants);
+        return new PagedResponse<List<GetRestaurantDto>>(data, filter.PageNumber, filter.PageSize, totalRecords);
     }
 
     public async Task<Response<GetRestaurantDto>> GetRestaurantById(int id)
     {
-        try
+        var restaurant = await repository.GetByIdAsync(id);
+        if (restaurant is null)
         {
-            var restaurant = await context.Restaurants.FindAsync(id);
-            if (restaurant is null)
-            {
-                return new Response<GetRestaurantDto>(HttpStatusCode.NotFound, "Not found restaurant");
-            }
+            return new Response<GetRestaurantDto>(HttpStatusCode.NotFound, "Restaurant not found");
+        }
 
-            var dto = mapper.Map<GetRestaurantDto>(restaurant);
-            return new Response<GetRestaurantDto>(dto);
-        }
-        catch (Exception e)
-        {
-            throw new("Cannot add find restaurant by id", e);
-        }
+        return new Response<GetRestaurantDto>(mapper.Map<GetRestaurantDto>(restaurant));
     }
 
     public async Task<Response<GetRestaurantDto>> CreateRestaurant(CreateRestaurantDto dto)
@@ -63,16 +39,16 @@ public class RestaurantService(DataContext context, IMapper mapper) : IRestauran
         try
         {
             var restaurant = mapper.Map<Restaurant>(dto);
-            await context.Restaurants.AddAsync(restaurant);
-            var result = await context.SaveChangesAsync();
-            var getDto = mapper.Map<GetRestaurantDto>(restaurant);
+            await repository.AddAsync(restaurant);
+            var result = await repository.SaveChangesAsync();
+
             return result == 0
-                ? new Response<GetRestaurantDto>(HttpStatusCode.BadRequest, "Restaurant not add")
-                : new Response<GetRestaurantDto>(getDto);
+                ? new Response<GetRestaurantDto>(HttpStatusCode.BadRequest, "Failed to create a restaurant")
+                : new Response<GetRestaurantDto>(mapper.Map<GetRestaurantDto>(restaurant));
         }
-        catch (DbUpdateException e)
+        catch (Exception e)
         {
-            throw new NotCreateException("FAILED TO SAVE RESTAURANT TO DB.", e);
+            throw new NotCreateException("Failed to save restaurant to DB", e);
         }
     }
 
@@ -80,20 +56,18 @@ public class RestaurantService(DataContext context, IMapper mapper) : IRestauran
     {
         try
         {
-            var restaurant = await context.Restaurants.FindAsync(id);
+            var restaurant = await repository.GetByIdAsync(id);
             if (restaurant is null)
             {
-                return new Response<GetRestaurantDto>(HttpStatusCode.NotFound, "Not found");
+                return new Response<GetRestaurantDto>(HttpStatusCode.NotFound, "Restaurant not found");
             }
 
             mapper.Map(dto, restaurant);
-            var result = await context.SaveChangesAsync();
-
-            var getDto = mapper.Map<GetRestaurantDto>(restaurant);
-            
+            repository.Update(restaurant);
+            var result = await repository.SaveChangesAsync();
             return result == 0
-                ? new Response<GetRestaurantDto>(HttpStatusCode.BadRequest, "Not update restaurant")
-                : new Response<GetRestaurantDto>(getDto);
+                ? new Response<GetRestaurantDto>(HttpStatusCode.BadRequest, "Restaurant not updated")
+                : new Response<GetRestaurantDto>(mapper.Map<GetRestaurantDto>(restaurant));
         }
         catch (DbUpdateException e)
         {
@@ -103,24 +77,17 @@ public class RestaurantService(DataContext context, IMapper mapper) : IRestauran
 
     public async Task<Response<string>> DeleteRestaurant(int id)
     {
-        try
+        var restaurant = await repository.GetByIdAsync(id);
+        if (restaurant is null)
         {
-            var restaurant = await context.Restaurants.FindAsync(id);
-            if (restaurant is null)
-            {
-                return new Response<string>(HttpStatusCode.NotFound, "Not found");
-            }
+            return new Response<string>(HttpStatusCode.NotFound, "Restaurant not found");
+        }
 
-            context.Restaurants.Remove(restaurant);
-            var result = await context.SaveChangesAsync();
-            return result == 0
-                ? new Response<string>(HttpStatusCode.BadRequest, "Not delete")
-                : new Response<string>("Deleted");
-        }
-        catch (Exception e)
-        {
-            Console.WriteLine(e);
-            throw;
-        }
+        repository.Delete(restaurant);
+        var result = await repository.SaveChangesAsync();
+        return result == 0
+            ? new Response<string>(HttpStatusCode.BadRequest, "Failed to delete")
+            : new Response<string>("Deleted");
+
     }
 }

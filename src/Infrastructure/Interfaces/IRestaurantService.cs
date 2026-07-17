@@ -4,7 +4,7 @@ using Core.Responses;
 
 namespace Infrastructure.Interfaces;
 
-public interface IRestaurantDto
+public interface IRestaurantService
 {
     Task<Response<List<GetRestaurantDto>>> GetRestaurants(RestaurantFilter filter);
     Task<Response<GetRestaurantDto>> GetRestaurantById(int id);

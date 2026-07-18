@@ -8,57 +8,29 @@ using Core.Filters;
 using Core.Responses;
 using Infrastructure.Data;
 using Infrastructure.Interfaces;
+using Infrastructure.Interfaces.Repositories;
 using Infrastructure.Interfaces.Services;
 using Microsoft.EntityFrameworkCore;
 
 namespace Infrastructure.Services;
 
-public class OrderDetailService(DataContext context, IMapper mapper) : IOrderDetailService
+public class OrderDetailService(IOrderDetailRepository repository, IMapper mapper) : IOrderDetailService
 {
     public async Task<Response<List<GetOrderDetailDto>>> GetOrderDetails(OrderDetailFilter filter)
     {
-        try
-        {
-            var query = context.OrderDetails.AsNoTracking().AsQueryable();
-            if (filter.FromPrice is not null)
-            {
-                query = query.Where(x => x.Price >= filter.FromPrice);
-            }
-
-            if (filter.ToPrice is not null)
-            {
-                query = query.Where(x => x.Price <= filter.ToPrice);
-            }
-
-            var totalRecords = await query.CountAsync();
-            var orderDetails = await query.OrderBy(n => n.Id)
-                .Skip((filter.PageNumber - 1) * filter.PageSize)
-                .Take(filter.PageSize)
-                .ToListAsync();
-
-            var data = mapper.Map<List<GetOrderDetailDto>>(orderDetails);
-            return new PagedResponse<List<GetOrderDetailDto>>(
-                data,
-                filter.PageNumber,
-                filter.PageSize,
-                totalRecords
-            );
-        }
-        catch (Exception e)
-        {
-            Console.WriteLine(e);
-            throw;
-        }
+        var (orderDetailts, totalRecords) = await repository.GetPagedOrderDetailsAsync(filter);
+        var data = mapper.Map<List<GetOrderDetailDto>>(orderDetailts);
+        return new PagedResponse<List<GetOrderDetailDto>>(data, filter.PageNumber, filter.PageSize, totalRecords);
     }
 
     public async Task<Response<GetOrderDetailDto>> GetOrderDetailById(int id)
     {
         try
         {
-            var orderDetail = await context.OrderDetails.FindAsync(id);
+            var orderDetail = await repository.GetByIdAsync(id);
             if (orderDetail is null)
             {
-                return new Response<GetOrderDetailDto>(HttpStatusCode.NotFound, "Not found");
+                return new Response<GetOrderDetailDto>(HttpStatusCode.NotFound, "Order detail not found");
             }
 
             var dto = mapper.Map<GetOrderDetailDto>(orderDetail);
@@ -75,16 +47,15 @@ public class OrderDetailService(DataContext context, IMapper mapper) : IOrderDet
         try
         {
             var orderDetail = mapper.Map<OrderDetail>(dto);
-            await context.OrderDetails.AddAsync(orderDetail);
-            var result = await context.SaveChangesAsync();
-            var getDto = mapper.Map<GetOrderDetailDto>(orderDetail);
+            await repository.AddAsync(orderDetail);
+            var result = await repository.SaveChangesAsync();
             return result == 0
-                ? new Response<GetOrderDetailDto>(HttpStatusCode.BadRequest, "OrderDetail not add")
-                : new Response<GetOrderDetailDto>(getDto);
+                ? new Response<GetOrderDetailDto>(HttpStatusCode.BadRequest, "Order detail not added")
+                : new Response<GetOrderDetailDto>(mapper.Map<GetOrderDetailDto>(orderDetail));
         }
         catch (DbUpdateException e)
         {
-            throw new NotCreateException("FAILED TO SAVE ORDERDETAIL TO DB.", e);
+            throw new NotCreateException("Failed to create an order detail", e);
         }
     }
 
@@ -92,24 +63,21 @@ public class OrderDetailService(DataContext context, IMapper mapper) : IOrderDet
     {
         try
         {
-            var orderDetail = await context.OrderDetails.FindAsync(id);
+            var orderDetail = await repository.GetByIdAsync(id);
             if (orderDetail is null)
             {
-                return new Response<GetOrderDetailDto>(HttpStatusCode.NotFound, "Not found");
+                return new Response<GetOrderDetailDto>(HttpStatusCode.NotFound, "Order detail found");
             }
 
             mapper.Map(dto, orderDetail);
-            var result = await context.SaveChangesAsync();
-
-            var getDto = mapper.Map<GetOrderDetailDto>(orderDetail);
-            
+            var result = await repository.SaveChangesAsync();
             return result == 0
-                ? new Response<GetOrderDetailDto>(HttpStatusCode.BadRequest, "Not update orderDetail")
-                : new Response<GetOrderDetailDto>(getDto);
+                ? new Response<GetOrderDetailDto>(HttpStatusCode.BadRequest, "Order detail not update")
+                : new Response<GetOrderDetailDto>(mapper.Map<GetOrderDetailDto>(orderDetail));
         }
         catch (DbUpdateException e)
         {
-            throw new NotUpdatedException("FAILED TO UPDATE ORDERDETAIL.", e);
+            throw new NotUpdatedException("Failed to update an order detail.", e);
         }
     }
 
@@ -117,16 +85,16 @@ public class OrderDetailService(DataContext context, IMapper mapper) : IOrderDet
     {
         try
         {
-            var orderDetail = await context.OrderDetails.FindAsync(id);
+            var orderDetail = await repository.GetByIdAsync(id);
             if (orderDetail is null)
             {
-                return new Response<string>(HttpStatusCode.NotFound, "Not found");
+                return new Response<string>(HttpStatusCode.NotFound, "Order detail not found");
             }
 
-            context.OrderDetails.Remove(orderDetail);
-            var result = await context.SaveChangesAsync();
+            repository.Delete(orderDetail);
+            var result = await repository.SaveChangesAsync();
             return result == 0
-                ? new Response<string>(HttpStatusCode.BadRequest, "Not delete")
+                ? new Response<string>(HttpStatusCode.BadRequest, "Order detail not deleted")
                 : new Response<string>("Deleted");
         }
         catch (Exception e)

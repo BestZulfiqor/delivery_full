@@ -7,87 +7,29 @@ using Core.Filters;
 using Core.Responses;
 using Infrastructure.Data;
 using Infrastructure.Interfaces;
+using Infrastructure.Interfaces.Repositories;
 using Infrastructure.Interfaces.Services;
 using Microsoft.EntityFrameworkCore;
 
 namespace Infrastructure.Services;
 
-public class MenuService(DataContext context, IMapper mapper) : IMenuService
+public class MenuService(IMenuRepository repository, IMapper mapper) : IMenuService
 {
     public async Task<Response<List<GetMenuDto>>> GetMenus(MenuFilter filter)
     {
-        try
-        {
-            var query = context.Menus.AsNoTracking().AsQueryable();
-            if (filter.FromPreparationTime is not null)
-            {
-                query = query.Where(x => x.PreparationTime >= filter.FromPreparationTime);
-            }
-
-            if (filter.ToPreparationTime is not null)
-            {
-                query = query.Where(x => x.PreparationTime <= filter.ToPreparationTime);
-            }
-
-            if (filter.FromPrice is not null)
-            {
-                query = query.Where(x => x.Price >= filter.FromPrice);
-            }
-
-            if (filter.ToPrice is not null)
-            {
-                query = query.Where(x => x.Price <= filter.ToPrice);
-            }
-
-            if (filter.FromWeight is not null)
-            {
-                query = query.Where(x => x.Weight >= filter.FromWeight);
-            }
-
-            if (filter.ToWeight is not null)
-            {
-                query = query.Where(x => x.Weight <= filter.ToWeight);
-            }
-
-            if (filter.IsAvailable is not null)
-            {
-                query = query.Where(x => x.IsAvailable == filter.IsAvailable);
-            }
-
-            if (!string.IsNullOrWhiteSpace(filter.Name))
-            {
-                query = query.Where(x => x.Name.ToLower().Contains(filter.Name.ToLower()));
-            }
-
-            var totalRecords = await query.CountAsync();
-            var menus = await query.OrderBy(n => n.Id)
-                .Skip((filter.PageNumber - 1) * filter.PageSize)
-                .Take(filter.PageSize)
-                .ToListAsync();
-
-            var data = mapper.Map<List<GetMenuDto>>(menus);
-            return new PagedResponse<List<GetMenuDto>>(
-                data,
-                filter.PageNumber,
-                filter.PageSize,
-                totalRecords
-            );
-        }
-        catch (Exception e)
-        {
-            Console.WriteLine(e);
-            throw;
-        }
+        var (menus, totalRecords) = await repository.GetPagedMenusAsync(filter);
+        var data = mapper.Map<List<GetMenuDto>>(menus);
+        return new PagedResponse<List<GetMenuDto>>(data, filter.PageNumber, filter.PageSize, totalRecords);
     }
 
     public async Task<Response<GetMenuDto>> GetMenuById(int id)
     {
         try
         {
-            var menu = await context.Menus.FindAsync(id);
+            var menu = await repository.GetByIdAsync(id);
             if (menu is null)
             {
-                return new Response<GetMenuDto>(HttpStatusCode.NotFound, "Not found courier");
+                return new Response<GetMenuDto>(HttpStatusCode.NotFound, "Menu not found");
             }
 
             var dto = mapper.Map<GetMenuDto>(menu);
@@ -105,12 +47,11 @@ public class MenuService(DataContext context, IMapper mapper) : IMenuService
         try
         {
             var menu = mapper.Map<Menu>(dto);
-            await context.Menus.AddAsync(menu);
-            var result = await context.SaveChangesAsync();
-            var getDto = mapper.Map<GetMenuDto>(menu);
+            await repository.AddAsync(menu);
+            var result = await repository.SaveChangesAsync();
             return result == 0
-                ? new Response<GetMenuDto>(HttpStatusCode.BadRequest, "Not add")
-                : new Response<GetMenuDto>(getDto);
+                ? new Response<GetMenuDto>(HttpStatusCode.BadRequest, "Meny not added")
+                : new Response<GetMenuDto>(mapper.Map<GetMenuDto>(menu));
         }
         catch (DbUpdateException e)
         {
@@ -123,25 +64,22 @@ public class MenuService(DataContext context, IMapper mapper) : IMenuService
     {
         try
         {
-            var menu = await context.Menus.FindAsync(id);
+            var menu = await repository.GetByIdAsync(id);
             if (menu is null)
             {
-                return new Response<GetMenuDto>(HttpStatusCode.NotFound, "Not found");
+                return new Response<GetMenuDto>(HttpStatusCode.NotFound, "Menu not found");
             }
 
             mapper.Map(dto, menu);
-            var result = await context.SaveChangesAsync();
-
-            var getDto = mapper.Map<GetMenuDto>(menu);
+            var result = await repository.SaveChangesAsync();
             
             return result == 0
-                ? new Response<GetMenuDto>(HttpStatusCode.BadRequest, "Not updated")
-                : new Response<GetMenuDto>(getDto);
+                ? new Response<GetMenuDto>(HttpStatusCode.BadRequest, "Menu not updated")
+                : new Response<GetMenuDto>(mapper.Map<GetMenuDto>(menu));
         }
         catch (DbUpdateException e)
         {
-            Console.WriteLine(e.Message);
-            throw;
+            throw new NotUpdatedException("Failed to update menu.", e);
         }
     }
 
@@ -149,16 +87,16 @@ public class MenuService(DataContext context, IMapper mapper) : IMenuService
     {
         try
         {
-            var menu = await context.Menus.FindAsync(id);
+            var menu = await repository.GetByIdAsync(id);
             if (menu is null)
             {
-                return new Response<string>(HttpStatusCode.NotFound, "Not found");
+                return new Response<string>(HttpStatusCode.NotFound, "Menu not found");
             }
 
-            context.Menus.Remove(menu);
-            var result = await context.SaveChangesAsync();
+            repository.Delete(menu);
+            var result = await repository.SaveChangesAsync();
             return result == 0
-                ? new Response<string>(HttpStatusCode.BadRequest, "Not deleted")
+                ? new Response<string>(HttpStatusCode.BadRequest, "Menu not deleted")
                 : new Response<string>("Deleted");
         }
         catch (Exception e)

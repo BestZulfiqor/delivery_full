@@ -2,52 +2,34 @@ using System.Net;
 using AutoMapper;
 using Core.DTOs.OrderDto;
 using Core.Entities;
+using Core.Exceptions;
 using Core.Filters;
 using Core.Responses;
 using Infrastructure.Data;
 using Infrastructure.Interfaces;
+using Infrastructure.Interfaces.Repositories;
 using Infrastructure.Interfaces.Services;
 using Microsoft.EntityFrameworkCore;
 
 namespace Infrastructure.Services;
 
-public class OrderService(DataContext context, IMapper mapper) : IOrderService
+public class OrderService(IOrderRepository repository, IMapper mapper) : IOrderService
 {
     public async Task<Response<List<GetOrderDto>>> GetOrders(OrderFilter filter)
     {
-        var query = context.Orders.AsNoTracking().AsQueryable();
-        if (filter.FromCreatedDate is not null)
-        {
-            query = query.Where(x => x.CreatedAt >= filter.FromCreatedDate);
-        }
-
-        if (filter.ToCreatedDate is not null)
-        {
-            query = query.Where(x => x.CreatedAt <= filter.ToCreatedDate);
-        }
-
-        if (filter.OrderStatus is not null)
-        {
-            query = query.Where(x => x.OrderStatus == filter.OrderStatus);
-        }
-
-        var totalRecors = await query.CountAsync();
-        var orders = await query.OrderBy(order => order.Id)
-            .Skip((filter.PageNumber - 1) * filter.PageSize)
-            .Take(filter.PageSize)
-            .ToListAsync();
+        var (orders, totalRecords) = await repository.GetPagedOrdersAsync(filter);
         var data = mapper.Map<List<GetOrderDto>>(orders);
-        return new PagedResponse<List<GetOrderDto>>(data, filter.PageNumber, filter.PageSize, totalRecors);
+        return new PagedResponse<List<GetOrderDto>>(data, filter.PageNumber, filter.PageSize, totalRecords);
     }
 
     public async Task<Response<GetOrderDto>> GetOrderById(int id)
     {
         try
         {
-            var order = await context.Orders.FindAsync(id);
+            var order = await repository.GetByIdAsync(id);
             if (order is null)
             {
-                return new Response<GetOrderDto>(HttpStatusCode.NotFound, "Not found");
+                return new Response<GetOrderDto>(HttpStatusCode.NotFound, "Order not found");
             }
 
             var dto = mapper.Map<GetOrderDto>(order);
@@ -65,17 +47,15 @@ public class OrderService(DataContext context, IMapper mapper) : IOrderService
         try
         {
             var order = mapper.Map<Order>(dto);
-            await context.Orders.AddAsync(order);
-            var result = await context.SaveChangesAsync();
-            var response = mapper.Map<GetOrderDto>(order);
+            await repository.AddAsync(order);
+            var result = await repository.SaveChangesAsync();
             return result == 0
-                ? new Response<GetOrderDto>(HttpStatusCode.BadRequest, "Not created")
-                : new Response<GetOrderDto>(response);
+                ? new Response<GetOrderDto>(HttpStatusCode.BadRequest, "Order not created")
+                : new Response<GetOrderDto>(mapper.Map<GetOrderDto>(order));
         }
         catch (Exception e)
         {
-            Console.WriteLine(e);
-            throw;
+            throw new NotCreateException("Failed to create an order", e);
         }
     }
 
@@ -83,24 +63,22 @@ public class OrderService(DataContext context, IMapper mapper) : IOrderService
     {
         try
         {
-            var order = await context.OrderDetails.FindAsync(id);
+            var order = await repository.GetByIdAsync(id);
             if (order is null)
             {
-                return new Response<GetOrderDto>(HttpStatusCode.NotFound, "Not found order");
+                return new Response<GetOrderDto>(HttpStatusCode.NotFound, "Order not found");
             }
 
             mapper.Map(dto, order);
-            var response = mapper.Map<GetOrderDto>(order);
-            var result = await context.SaveChangesAsync();
+            var result = await repository.SaveChangesAsync();
 
             return result == 0
-                ? new Response<GetOrderDto>(HttpStatusCode.BadRequest, "Not update")
-                : new Response<GetOrderDto>(response);
+                ? new Response<GetOrderDto>(HttpStatusCode.BadRequest, "Order not update")
+                : new Response<GetOrderDto>(mapper.Map<GetOrderDto>(order));
         }
         catch (Exception e)
         {
-            Console.WriteLine(e);
-            throw;
+            throw new NotUpdatedException("Failed to update an order", e);
         }
     }
 
@@ -108,16 +86,16 @@ public class OrderService(DataContext context, IMapper mapper) : IOrderService
     {
         try
         {
-            var order = await context.Orders.FindAsync(id);
+            var order = await repository.GetByIdAsync(id);
             if (order is null)
             {
-                return new Response<string>(HttpStatusCode.NotFound, "Not delete");
+                return new Response<string>(HttpStatusCode.NotFound, "Order not delete");
             }
 
-            context.Orders.Remove(order);
-            var result = await context.SaveChangesAsync();
+            repository.Delete(order);
+            var result = await repository.SaveChangesAsync();
             return result == 0
-                ? new Response<string>(HttpStatusCode.BadRequest, "Not delete")
+                ? new Response<string>(HttpStatusCode.BadRequest, "Order not deleted")
                 : new Response<string>("Deleted");
         }
         catch (Exception e)

@@ -10,7 +10,7 @@ public class RestaurantRepository(DataContext context) : BaseRepository<Restaura
 {
     public async Task<(List<Restaurant> Data, int TotalRecords)> GetPagedRestaurantsAsync(RestaurantFilter filter)
     {
-        var query = DbSet.AsNoTracking();
+        var query = GetAll();
         if (filter.FromDeliveryPrice is not null)
         {
             query = query.Where(x => x.DeliveryPrice >= filter.FromDeliveryPrice);

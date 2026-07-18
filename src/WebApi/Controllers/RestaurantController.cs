@@ -12,32 +12,17 @@ namespace Delivery.Controllers;
 public class RestaurantController(IRestaurantService service) : ControllerBase
 {
     [HttpGet]
-    public async Task<Response<List<GetRestaurantDto>>> GetAll([FromQuery] RestaurantFilter filter)
-    {
-        return await service.GetRestaurants(filter);
-    }
+    public async Task<Response<List<GetRestaurantDto>>> GetAll([FromQuery] RestaurantFilter filter) => await service.GetRestaurants(filter);
 
     [HttpGet("{id}")]
-    public async Task<Response<GetRestaurantDto>> GetRestaurant(int id)
-    {
-        return await service.GetRestaurantById(id);
-    }
-    
+    public async Task<Response<GetRestaurantDto>> GetRestaurant(int id) => await service.GetRestaurantById(id);
+
     [HttpPost]
-    public async Task<Response<GetRestaurantDto>> Create([FromBody] CreateRestaurantDto dto)
-    {
-        return await service.CreateRestaurant(dto);
-    }
+    public async Task<Response<GetRestaurantDto>> Create([FromBody] CreateRestaurantDto dto) => await service.CreateRestaurant(dto);
 
     [HttpPut("{id}")]
-    public async Task<Response<GetRestaurantDto>> Update(int id, [FromBody] UpdateRestaurantDto dto)
-    {
-        return await service.UpdateRestaurant(id, dto);
-    }
+    public async Task<Response<GetRestaurantDto>> Update(int id, [FromBody] UpdateRestaurantDto dto) => await service.UpdateRestaurant(id, dto);
 
     [HttpDelete("{id}")]
-    public async Task<Response<string>> Delete(int id)
-    {
-        return await service.DeleteRestaurant(id);
-    }
+    public async Task<Response<string>> Delete(int id) => await service.DeleteRestaurant(id);
 }

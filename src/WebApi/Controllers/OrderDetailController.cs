@@ -12,32 +12,17 @@ namespace Delivery.Controllers;
 public class OrderDetailController(IOrderDetailService service) : ControllerBase
 {
     [HttpGet]
-    public async Task<Response<List<GetOrderDetailDto>>> GetAll([FromQuery] OrderDetailFilter filter)
-    {
-        return await service.GetOrderDetails(filter);
-    }
+    public async Task<Response<List<GetOrderDetailDto>>> GetAll([FromQuery] OrderDetailFilter filter) => await service.GetOrderDetails(filter);
 
     [HttpGet("{id}")]
-    public async Task<Response<GetOrderDetailDto>> GetOrderDetail(int id)
-    {
-        return await service.GetOrderDetailById(id);
-    }
-    
+    public async Task<Response<GetOrderDetailDto>> GetOrderDetail(int id) => await service.GetOrderDetailById(id);
+
     [HttpPost]
-    public async Task<Response<GetOrderDetailDto>> Create([FromBody] CreateOrderDetailDto dto)
-    {
-        return await service.CreateOrderDetail(dto);
-    }
+    public async Task<Response<GetOrderDetailDto>> Create([FromBody] CreateOrderDetailDto dto) => await service.CreateOrderDetail(dto);
 
     [HttpPut("{id}")]
-    public async Task<Response<GetOrderDetailDto>> Update(int id, [FromBody] UpdateOrderDetailDto dto)
-    {
-        return await service.UpdateOrderDetail(id, dto);
-    }
+    public async Task<Response<GetOrderDetailDto>> Update(int id, [FromBody] UpdateOrderDetailDto dto) => await service.UpdateOrderDetail(id, dto);
 
     [HttpDelete("{id}")]
-    public async Task<Response<string>> Delete(int id)
-    {
-        return await service.DeleteOrderDetail(id);
-    }
+    public async Task<Response<string>> Delete(int id) => await service.DeleteOrderDetail(id);
 }

@@ -15,7 +15,7 @@ public class BaseRepository<T>(DataContext context) : IBaseRepository<T> where T
 
     public async Task AddAsync(T entity) => await DbSet.AddAsync(entity);
 
-    public void Update(T entity) => DbSet.Attach(entity);
+    public void Update(T entity) => DbSet.Update(entity);
 
     public void Delete(T entity) => DbSet.Remove(entity);
 

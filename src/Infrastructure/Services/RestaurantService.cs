@@ -25,13 +25,20 @@ public class RestaurantService(IRestaurantRepository repository, IMapper mapper)
 
     public async Task<Response<GetRestaurantDto>> GetRestaurantById(int id)
     {
-        var restaurant = await repository.GetByIdAsync(id);
-        if (restaurant is null)
+        try
         {
-            return new Response<GetRestaurantDto>(HttpStatusCode.NotFound, "Restaurant not found");
-        }
+            var restaurant = await repository.GetByIdAsync(id);
+            if (restaurant is null)
+            {
+                return new Response<GetRestaurantDto>(HttpStatusCode.NotFound, "Restaurant not found");
+            }
 
-        return new Response<GetRestaurantDto>(mapper.Map<GetRestaurantDto>(restaurant));
+            return new Response<GetRestaurantDto>(mapper.Map<GetRestaurantDto>(restaurant));
+        }
+        catch (Exception e)
+        {
+            throw new Exception("Database is temporary not available" , e);
+        }
     }
 
     public async Task<Response<GetRestaurantDto>> CreateRestaurant(CreateRestaurantDto dto)
